@@ -78,20 +78,12 @@ class SerCom:
     def close(self):
         self.com.close()
 
-    def __readExactly(self, size: int) -> bytearray:
-        buf = bytearray()
-        with self.lock:
-            while len(buf) < size:
-                buf += self.com.read(size - len(buf))
-
-        return buf
-
     @property
     @ioTask
     def battVoltage(self) -> float:
         self.com.write(bytes([COMMAND_DICT['batt-voltage'], 0]))
         msgLen = int.from_bytes(self.com.read(1), 'big')
-        battv = self.__readExactly(msgLen).decode()
+        battv = self.com.read(msgLen).decode()
         battv = round(float(battv), 3)
 
         return battv
@@ -101,7 +93,7 @@ class SerCom:
     def battCurrent(self) -> float:
         self.com.write(bytes([COMMAND_DICT['current'], 0]))
         msgLen = int.from_bytes(self.com.read(1), 'big')
-        current = self.__readExactly(msgLen).decode()
+        current = self.com.read(msgLen).decode()
         current = int(round(float(current)*1000, 3))  # mA
 
         return current
@@ -118,7 +110,7 @@ class SerCom:
     def resistorTemp(self) -> float:
         self.com.write(bytes([COMMAND_DICT['temp1'], 0]))
         msgLen = int.from_bytes(self.com.read(1), 'big')
-        temp = self.__readExactly(msgLen).decode()
+        temp = self.com.read(msgLen).decode()
         temp = round(float(temp), 1)  # C
 
         return temp
@@ -128,7 +120,7 @@ class SerCom:
     def FETTemp(self) -> float:
         self.com.write(bytes([COMMAND_DICT['temp2'], 0]))
         msgLen = int.from_bytes(self.com.read(1), 'big')
-        temp = self.__readExactly(msgLen).decode()
+        temp = self.com.read(msgLen).decode()
         temp = round(float(temp), 1)  # C
 
         return temp
@@ -203,7 +195,7 @@ class BattEval:
                     updatePlot()
 
                     timeString.set(
-                        str(timedelta(seconds=round(time()-startTime)))+"s")
+                        str(timedelta(seconds=round(time()-startTime))))
 
                     if self.battVoltage+offset < BATT_CHEMS[chemString.get()][0]:
                         self.belowStopPointCount += 1
