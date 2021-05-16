@@ -8,7 +8,6 @@ Adin Ackerman
 """
 
 import threading
-from concurrent.futures import ThreadPoolExecutor
 import serial
 from serial.tools import list_ports
 from dataclasses import dataclass
