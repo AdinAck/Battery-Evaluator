@@ -1,0 +1,10 @@
+Output: Mixed Sim
+Type  : AdvSimNetlist
+From  : Project [Battery Evaluator (Altium).PrjPcb]
+   Generated File[Battery Evaluator (Altium).nsx]
+
+
+Files Generated   : 1
+Documents Printed : 0
+
+Finished Output Generation At 1:23:26 PM On 5/10/2021

@@ -1,0 +1,101 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP 06033C104KAT2A
+D Capacitor MLCC 0603 100nF 25V AVX 0603 Standard 100nF Ceramic Multilayer Capacitor, 25 V dc, +125C, X7R Dielectric, +/-10% SMD
+$ENDCMP
+#
+$CMP 06035A220JAT4A
+D AVX - 06035A220JAT4A - CERAMIC CAPACITOR 22PF 50V, C0G, 5%, 0603, FULL REEL
+F https://componentsearchengine.com/Datasheets/1/06031A100FAT2A.pdf
+$ENDCMP
+#
+$CMP 0603ZC105KAT2A
+D AVX - 0603ZC105KAT2A - CAP, MLCC, X7R, 1UF, 10V, 0603
+F https://componentsearchengine.com/Datasheets/1/0603ZC105KAT2A.pdf
+$ENDCMP
+#
+$CMP 0603ZD106KAT4A
+D Multilayer Ceramic Capacitors MLCC - SMD/SMT 10V 10uF 0603 10% XR5
+F https://componentsearchengine.com/Datasheets/1/06031A100FAT2A.pdf
+$ENDCMP
+#
+$CMP 47346-0001
+D Micro USB B Receptacle Bottom Mount Assy Molex Right Angle SMT Type B Version 2.0 Micro USB Connector Socket, 30 V ac, 1A 47352 MICRO-USB
+F http://www.molex.com/pdm_docs/sd/473460001_sd.pdf
+$ENDCMP
+#
+$CMP 960-23-12-D-AB-0
+D Heat Sinks BGA Heatsink, 23x12mm, Diagonal Plastic Push Pin
+F http://www.wakefield-vette.com/Portals/0/push pin heat sinks/Push Pin 960 Series Wakefield-Vette Data Sheet.pdf
+$ENDCMP
+#
+$CMP ATSAMD21G18A-AU
+D ATMEL - ATSAMD21G18A-AU - MCU, 32BIT, CORTEX-M0+, 48MHZ, TQFP-48
+$ENDCMP
+#
+$CMP ATSAMD21G18A-MU
+D Microchip Technology ATSAMD21G18A-MU, 32bit Microcontroller, 48MHz, 256 kB Flash, 48-Pin QFN
+F http://ww1.microchip.com/downloads/en/DeviceDoc/SAMD21-Family-DataSheet-DS40001882D.pdf
+$ENDCMP
+#
+$CMP CM7V-T1A-32.768kHz-6pF-20PPM-TA-QC
+D Crystals 32.768 kHz 6.0 pF +/-20 PPM -40/+85C
+F https://componentsearchengine.com/Datasheets/1/CM7V-T1A-32.768kHz-6pF-20PPM-TA-QC.pdf
+$ENDCMP
+#
+$CMP CRGP2512F12R
+D Resistor Thick Film Pulse 2512 12R 1%
+F https://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Data+Sheet%7F9-1773463-9%7FA%7Fpdf%7FEnglish%7FENG_DS_9-1773463-9_A.pdf%7F2176331-2
+$ENDCMP
+#
+$CMP ERJ-S02F1002X
+D Thick Film Resistors - SMD 0402 10Kohms 1% Anti-Sulfur
+F https://industrial.panasonic.com/cdbs/www-data/pdf/RDP0000/AOA0000C334.pdf
+$ENDCMP
+#
+$CMP ERJ-U02F1003X
+D PANASONIC ELECTRONIC COMPONENTS - ERJ-U02F1003X - RES, THICK FILM, 100K, 1%, 0.1W, 0402
+F https://componentsearchengine.com/Datasheets/1/ERJ-U02F1003X.pdf
+$ENDCMP
+#
+$CMP ERJ2RKD27R0X
+D PANASONIC ELECTRONIC COMPONENTS - ERJ2RKD27R0X - RES, THICK FILM, 27R, 0.5%, 0.063W, 0402
+F https://componentsearchengine.com/Datasheets/1/ERJ2RKD27R0X.pdf
+$ENDCMP
+#
+$CMP FT230XS-U
+D USB Interface IC USB to Basic Serial UART IC SSOP-16
+F https://www.ftdichip.com/Support/Documents/DataSheets/ICs/DS_FT230X.pdf
+$ENDCMP
+#
+$CMP MI1206K601R-10
+D LAIRD TECHNOLOGIES - MI1206K601R-10 - FERRITE, BEAD, 3216, 100MHZ, 600R
+F http://cdn.lairdtech.com/home/brandworld/files/MI1206K601R-10.pdf
+$ENDCMP
+#
+$CMP NE555DR
+D Single Precision Timer
+F http://www.ti.com/lit/ds/symlink/ne555.pdf
+$ENDCMP
+#
+$CMP PH2925U,115
+D NEXPERIA - PH2925U,115 - MOSFET Transistor, N Channel, 100 A, 25 V, 0.0023 ohm, 4.5 V, 700 mV
+F https://assets.nexperia.com/documents/data-sheet/PH2925U.pdf
+$ENDCMP
+#
+$CMP RC0402FR-075KL
+D Thick Film Resistors - SMD 5K ohm 1% 50V General Purpose
+F http://www.yageo.com/documents/recent/PYu-RC0402_51_RoHS_L_6_r.pdf
+$ENDCMP
+#
+$CMP SPX3819M5-L-3-3_TR
+D LDO Voltage Regulators 500mA LOW NOISE LDO
+F https://www.exar.com/ds/spx3819.pdf
+$ENDCMP
+#
+$CMP TLV9101IDBVR
+D Single 1MHz, 16-V rail-to-rail input/output, low-offset voltage, low-power op amp
+F http://www.ti.com/lit/ds/symlink/tlv9101.pdf
+$ENDCMP
+#
+#End Doc Library

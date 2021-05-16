@@ -1,0 +1,93 @@
+EESchema Schematic File Version 4
+EELAYER 30 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L Simulation_SPICE:OPAMP U1
+U 1 1 6090617F
+P 5000 3500
+F 0 "U1" H 5344 3546 50  0000 L CNN
+F 1 "OPAMP" H 5344 3455 50  0000 L CNN
+F 2 "" H 5000 3500 50  0001 C CNN
+F 3 "~" H 5000 3500 50  0001 C CNN
+F 4 "Y" H 5000 3500 50  0001 L CNN "Spice_Netlist_Enabled"
+F 5 "V" H 5000 3500 50  0001 L CNN "Spice_Primitive"
+	1    5000 3500
+	1    0    0    -1  
+$EndComp
+$Comp
+L Simulation_SPICE:VDC V2
+U 1 1 60907FD4
+P 4000 3500
+F 0 "V2" H 4130 3591 50  0000 L CNN
+F 1 "VDC" H 4130 3500 50  0000 L CNN
+F 2 "" H 4000 3500 50  0001 C CNN
+F 3 "~" H 4000 3500 50  0001 C CNN
+F 4 "Y" H 4000 3500 50  0001 L CNN "Spice_Netlist_Enabled"
+F 5 "V" H 4000 3500 50  0001 L CNN "Spice_Primitive"
+F 6 "dc(1)" H 4130 3409 50  0000 L CNN "Spice_Model"
+	1    4000 3500
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4000 3300 4700 3300
+Wire Wire Line
+	4700 3300 4700 3400
+$Comp
+L Simulation_SPICE:VDC V1
+U 1 1 6090A5AD
+P 3500 3500
+F 0 "V1" H 3630 3591 50  0000 L CNN
+F 1 "VDC" H 3630 3500 50  0000 L CNN
+F 2 "" H 3500 3500 50  0001 C CNN
+F 3 "~" H 3500 3500 50  0001 C CNN
+F 4 "Y" H 3500 3500 50  0001 L CNN "Spice_Netlist_Enabled"
+F 5 "V" H 3500 3500 50  0001 L CNN "Spice_Primitive"
+F 6 "dc(1)" H 3630 3409 50  0000 L CNN "Spice_Model"
+	1    3500 3500
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3500 3300 3500 3200
+Wire Wire Line
+	3500 3200 4900 3200
+Wire Wire Line
+	4900 3800 4500 3800
+Wire Wire Line
+	3500 3800 3500 3700
+Wire Wire Line
+	4000 3700 4000 3800
+Connection ~ 4000 3800
+Wire Wire Line
+	4000 3800 3500 3800
+Wire Wire Line
+	4700 3600 4500 3600
+Wire Wire Line
+	4500 3600 4500 3800
+Connection ~ 4500 3800
+Wire Wire Line
+	4500 3800 4000 3800
+$Comp
+L power:GNDREF #PWR01
+U 1 1 6090B779
+P 3500 3800
+F 0 "#PWR01" H 3500 3550 50  0001 C CNN
+F 1 "GNDREF" H 3505 3627 50  0000 C CNN
+F 2 "" H 3500 3800 50  0001 C CNN
+F 3 "" H 3500 3800 50  0001 C CNN
+	1    3500 3800
+	1    0    0    -1  
+$EndComp
+Connection ~ 3500 3800
+$EndSCHEMATC
