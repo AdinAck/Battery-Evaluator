@@ -50,9 +50,8 @@ def ioTask(f):
         with tasksReady:
             tasksReady.notify()
 
-        taskQueue.put((result, condition, lambda: f(*args)))
-
         with condition:
+            taskQueue.put((result, condition, lambda: f(*args)))
             condition.wait()
 
         return result.value
@@ -62,14 +61,10 @@ def ioTask(f):
 
 def ioLoop():
     while True:
-        with tasksReady:
-            tasksReady.wait()
-
-        while not taskQueue.empty():
-            r, c, task = taskQueue.get()
-            r.value = task()
-            with c:
-                c.notify()
+        r, c, task = taskQueue.get()
+        r.value = task()
+        with c:
+            c.notify()
 
 
 class SerCom:
