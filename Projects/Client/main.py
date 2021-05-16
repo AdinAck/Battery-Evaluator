@@ -15,9 +15,8 @@ from tkinter import *
 from tkinter.ttk import *
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import numpy as np
 from queue import Queue
-from time import sleep, time, time_ns
+from time import time, time_ns
 from datetime import timedelta
 from typing import *
 
