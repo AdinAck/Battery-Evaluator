@@ -21,4 +21,6 @@ A comprehensive battery evaluator board
 
 ## To Be Implemented
 - Constant power discharge mode
+- More battery chemistries
+- Custom battery voltage range
 - [Op-Amp oscillation fix](https://github.com/AdinAck/Battery-Evaluator/issues/1)
