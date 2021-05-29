@@ -5,7 +5,7 @@ A comprehensive battery evaluator board
 
 ![](https://github.com/AdinAck/Wiki-Images/blob/main/Battery-Evaluator/3d.png?raw=true)
 
-![](https://github.com/AdinAck/Wiki-Images/blob/main/Battery-Evaluator/real.png?raw=true)
+![](https://github.com/AdinAck/Wiki-Images/blob/main/Battery-Evaluator/real.jpg?raw=true)
 
 ## Electrical Characteristics
 - 0-5v battery (single cell)
