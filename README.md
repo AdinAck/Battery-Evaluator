@@ -24,4 +24,5 @@ A comprehensive battery evaluator board for running simple tests and measurement
 - More battery chemistries
 - Custom battery voltage range
 - [Op-Amp oscillation fix](https://github.com/AdinAck/Battery-Evaluator/issues/1)
-- Generate voltage -> percent charge function??
+- Combine, multiple constant current tests to make the ultimate battery profile
+- Generate voltage -> percent charge function
