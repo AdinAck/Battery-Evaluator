@@ -1,5 +1,5 @@
 # Battery-Evaluator
-A comprehensive battery evaluator board
+A comprehensive battery evaluator board for running simple tests and measurements, or creating a battery profile for accurately predicting charge level from voltage.
 
 ![](https://github.com/AdinAck/Wiki-Images/blob/main/Battery-Evaluator/gui.png?raw=true)
 
