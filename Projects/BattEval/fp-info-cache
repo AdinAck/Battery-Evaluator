@@ -1,4 +1,4 @@
-16957241106182219
+16984722556877040
 Battery
 BatteryHolder_Bulgin_BX0036_1xC
 Bulgin Battery Holder, BX0036, Battery Type C (https://www.bulgin.com/products/pub/media/bulgin/data/Battery_holders.pdf)
@@ -68719,6 +68719,34 @@ rotary encoder
 5
 4
 SamacSys_Parts
+47346-0001
+47346-0001
+Connector
+0
+11
+11
+SamacSys_Parts
+9602312DAB0
+960-23-12-D-AB-0-2
+Hardware
+0
+2
+2
+SamacSys_Parts
+APT1608CGCK
+1.6mmX0.8mm
+LED
+0
+2
+2
+SamacSys_Parts
+BEADC3216X130N
+MI1206
+Ferrite Bead
+0
+2
+2
+SamacSys_Parts
 CAPC1608X90N
 0603-1
 Capacitor
@@ -68726,22 +68754,106 @@ Capacitor
 2
 2
 SamacSys_Parts
-NE555DR
-D (R-PDSO-G8)
+CAPPM3216X180N
+CASE A
+Capacitor Polarised
+0
+2
+2
+SamacSys_Parts
+CM7VT1A32768kHz6pF20PPMTAQC
+CM7V-T1A-32.768kHz-6pF-20PPM-TA-QC-2
+Crystal or Oscillator
+0
+2
+2
+SamacSys_Parts
+EVQP9W02M
+EVQ-P9W02M-1
+Switch
+0
+4
+4
+SamacSys_Parts
+LEDC1608X80N
+150060AS75000
+LED
+0
+2
+2
+SamacSys_Parts
+M503600542
+M50-3600542-2
+Connector
+0
+10
+10
+SamacSys_Parts
+PSMN5R660YLX
+LFPAK56; PowerSO8 (SOT669)
+MOSFET (N-Channel)
+0
+6
+6
+SamacSys_Parts
+QFN50P700X700X90-49N-D
+ATSAMD21G18A-MU-1
 Integrated Circuit
 0
-8
-8
+49
+49
 SamacSys_Parts
-RESC1608X55N
-ERJ-PA3
+QFP50P900X900X120-48N
+TQFP 48_1
+Integrated Circuit
+0
+48
+48
+SamacSys_Parts
+RESC1005X40N
+ERJ-2R(0402)
 Resistor
 0
 2
 2
 SamacSys_Parts
-SOT95P270X145-5N
-5-Lead (OT) SOT-23
+RESC6432X65N
+CRGP2512F12R-1
+Resistor
+0
+2
+2
+SamacSys_Parts
+SODFL3616X98N
+SOD-123FL CASE498 ISSUE D
+Schottky Diode
+0
+2
+2
+SamacSys_Parts
+SOP64P599X175-16N
+SSOP-16 (MO-137AB)
+Integrated Circuit
+0
+16
+16
+SamacSys_Parts
+SOT65P210X110-5N
+DCK
+Integrated Circuit
+0
+5
+5
+SamacSys_Parts
+SOT95P237X112-3N
+DBZ
+Integrated Circuit
+0
+3
+3
+SamacSys_Parts
+SOT95P280X145-5N
+SPX3819M5-L-3-3/TR-1
 Integrated Circuit
 0
 5
@@ -75337,6 +75449,13 @@ Varistor
 RV_Disc_D21.5mm_W11.4mm_P10mm
 Varistor, diameter 21.5mm, width 11.4mm, pitch 10mm
 varistor SIOV
+0
+2
+2
+XT60-M
+AMASS_XT60-M
+
+
 0
 2
 2

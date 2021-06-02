@@ -10,7 +10,10 @@ COMMAND_DICT = {
     # 'temp1': 0x12,
     'temp2': 0x13,
     'set-current': 0x20,
+    'set-power': 0x21,
 }
+
+MODE = 'idle'
 
 # Pinouts
 uart = UART(TX, RX, baudrate=9600)  # UART
@@ -24,6 +27,7 @@ current = AnalogIn(A3)              # Current measure
 temp2 = AnalogIn(A4)                # Temperature measure 2
 
 targetCurrent = 0
+targetPower = 0
 
 watchdog = 0
 output = 0
@@ -84,11 +88,16 @@ while True:
             sendMeasurement(str(temp2Value))
 
         elif command == COMMAND_DICT['set-current']:
+            MODE = 'current'
             targetCurrent = int.from_bytes(
                 uart.read(header), 'big')/1000
 
             output = int(targetCurrent*2**16*14.7/5/3.3)
             print("Set current to {}".format(targetCurrent))
+        elif command == COMMAND_DICT['set-power']:
+            MODE = 'power'
+            targetPower = int.from_bytes(
+                uart.read(header), 'big')/1000
     else:
 
         if watchdog > 10:
@@ -99,6 +108,8 @@ while True:
 
     if battValue > 0.1:
         faultLed.value = False
+        if MODE == 'power':
+            targetCurrent = targetPower/battValue
         error = int((targetCurrent - currentValue) * 2**16 / 3.3)
         output += error//4
         mos.value = min(max(output, 0), 2**16-1)

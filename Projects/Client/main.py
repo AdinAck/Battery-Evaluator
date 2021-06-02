@@ -26,6 +26,7 @@ COMMAND_DICT = {
     # 'temp1': 0x12,
     'temp2': 0x13,
     'set-current': 0x20,
+    'set-power': 0x21,
 }
 
 BATT_CHEMS = {
@@ -107,6 +108,18 @@ class SerCom:
 
     @property
     @ioTask
+    def battPower(self) -> float:
+        return self.battCurrent*self.battVoltage
+
+    @battPower.setter
+    @ioTask
+    def battPower(self, value: int) -> None:
+        msg = int.to_bytes(value, 2, 'big')
+        self.com.write(bytes([COMMAND_DICT['set-power'], 2]))
+        self.com.write(msg)
+
+    @property
+    @ioTask
     def resistorTemp(self) -> float:
         self.com.write(bytes([COMMAND_DICT['temp1'], 0]))
         msgLen = int.from_bytes(self.com.read(1), 'big')
@@ -183,7 +196,7 @@ class BattEval:
                 offset = self.battESR*self.battCurrent/1000
 
                 # A constant current test is occuring
-                if constCurntStartButton['text'] == "Stop":
+                if "Stop" in (constCurntStartButton['text'], constPwrStartButton['text']):
                     if int(self.mAh) not in self.mAhHistory:
                         self.battVoltageHistory.append(self.battVoltage)
                         self.adjustedBattVoltageHistory.append(
@@ -301,9 +314,9 @@ def ready():
     constCurntLabel['state'] = 'normal'
     constCurntValue['state'] = 'normal'
     constCurntStartButton['state'] = 'normal'
-    constPowerLabel['state'] = 'normal'
-    constPowerValue['state'] = 'normal'
-    constPowerStartButton['state'] = 'normal'
+    constPwrLabel['state'] = 'normal'
+    constPwrValue['state'] = 'normal'
+    constPwrStartButton['state'] = 'normal'
 
     currentLabel['state'] = 'normal'
     currentValue['state'] = 'normal'
@@ -319,9 +332,9 @@ def notReady():
     constCurntLabel['state'] = 'disabled'
     constCurntValue['state'] = 'disabled'
     constCurntStartButton['state'] = 'disabled'
-    constPowerLabel['state'] = 'disabled'
-    constPowerValue['state'] = 'disabled'
-    constPowerStartButton['state'] = 'disabled'
+    constPwrLabel['state'] = 'disabled'
+    constPwrValue['state'] = 'disabled'
+    constPwrStartButton['state'] = 'disabled'
 
     currentString.set("")
     mAhString.set("")
@@ -377,10 +390,10 @@ def startConstCurntDraw():
     constCurntStartButton['text'] = 'Working'
     constCurntStartButton['state'] = 'disabled'
     constCurntValue['state'] = 'disabled'
-    constPowerStartButton['state'] = 'disabled'
-    constPowerValue['state'] = 'disabled'
+    constPwrStartButton['state'] = 'disabled'
+    constPwrValue['state'] = 'disabled'
     ESRValue['state'] = 'disabled'
-    getESR(int(constCurntString.get()))
+    getESR()
     ESRValue['state'] = 'normal'
     timeLabel['state'] = 'normal'
     timeValue['state'] = 'normal'
@@ -411,8 +424,53 @@ def stopConstCurntDraw():
     constCurntStartButton['text'] = 'Start'
     constCurntStartButton['command'] = startConstCurntDraw
     constCurntValue['state'] = 'normal'
-    constPowerStartButton['state'] = 'normal'
-    constPowerValue['state'] = 'normal'
+    constPwrStartButton['state'] = 'normal'
+    constPwrValue['state'] = 'normal'
+
+    updateStatus("Test ended.")
+
+
+def startConstPwrDraw():
+    global startTime
+    constPwrStartButton['text'] = 'Working'
+    constPwrStartButton['state'] = 'disabled'
+    constPwrValue['state'] = 'disabled'
+    constCurntStartButton['state'] = 'disabled'
+    constCurntValue['state'] = 'disabled'
+    ESRValue['state'] = 'disabled'
+    getESR()
+    ESRValue['state'] = 'normal'
+    timeLabel['state'] = 'normal'
+    timeValue['state'] = 'normal'
+
+    startTime = time()
+
+    ser.battPower = int(constPwrString.get())
+    constPwrStartButton['state'] = 'nornmal'
+    constPwrStartButton['text'] = 'Stop'
+    constPwrStartButton['command'] = stopConstPwrDraw
+    board.battVoltageHistory = []
+    board.adjustedBattVoltageHistory = []
+    board.currentHistory = []
+    # ser.temp1History = []
+    board.temp2History = []
+    board.mAhHistory = []
+    ax1.clear()
+    ax2.clear()
+
+    updateStatus("Test started.")
+
+    if ser.battVoltage < BATT_CHEMS[chemString.get()][1]:
+        updateStatus("[WARNING] Battery not full, test may be inconclusive.")
+
+
+def stopConstPwrDraw():
+    ser.battCurrent = 0
+    constPwrStartButton['text'] = 'Start'
+    constPwrStartButton['command'] = startConstPwrDraw
+    constPwrValue['state'] = 'normal'
+    constCurntStartButton['state'] = 'normal'
+    constCurntValue['state'] = 'normal'
 
     updateStatus("Test ended.")
 
@@ -437,7 +495,7 @@ root.title("Battery Evaluator Client")
 comportString = StringVar()
 chemString = StringVar()
 constCurntString = StringVar()
-constPowerString = StringVar()
+constPwrString = StringVar()
 battString = StringVar()
 currentString = StringVar()
 resistorTempString = StringVar()
@@ -505,18 +563,18 @@ constCurntStartButton = Button(
 constCurntStartButton.grid(row=4, column=1, padx=5, pady=5, sticky="W")
 constCurntStartButton['state'] = 'disabled'
 
-constPowerLabel = Label(left, text="Constant Power\nDischarge Test:")
-constPowerLabel.grid(row=5, column=0, padx=5, pady=5, sticky="W")
-constPowerLabel['state'] = 'disabled'
+constPwrLabel = Label(left, text="Constant Power\nDischarge Test:")
+constPwrLabel.grid(row=5, column=0, padx=5, pady=5, sticky="W")
+constPwrLabel['state'] = 'disabled'
 
-constPowerValue = Entry(left, textvariable=constPowerString, width=10)
-constPowerValue.grid(row=5, column=1, padx=5, pady=5, sticky="SW")
-constPowerValue['state'] = 'disabled'
+constPwrValue = Entry(left, textvariable=constPwrString, width=10)
+constPwrValue.grid(row=5, column=1, padx=5, pady=5, sticky="SW")
+constPwrValue['state'] = 'disabled'
 
-constPowerStartButton = Button(
-    left, text="Start")
-constPowerStartButton.grid(row=6, column=1, padx=5, pady=5, sticky="W")
-constPowerStartButton['state'] = 'disabled'
+constPwrStartButton = Button(
+    left, text="Start", command=startConstPwrDraw)
+constPwrStartButton.grid(row=6, column=1, padx=5, pady=5, sticky="W")
+constPwrStartButton['state'] = 'disabled'
 
 # Measurements
 battVoltageLabel = Label(right, text="Batt voltage:")
