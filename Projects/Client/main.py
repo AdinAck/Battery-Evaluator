@@ -228,7 +228,7 @@ class BattEval:
                     else:
                         self.belowStopPointCount = 0
 
-                    if self.belowStopPointCount > 10:
+                    if self.belowStopPointCount > 50:
                         stopTest()
 
                 if chemString.get() != "-":
@@ -262,12 +262,12 @@ def updatePlot():
     axs[0, 0].plot(history, board.battVoltageHistory, label="Measured")
     axs[0, 0].plot(history, board.adjustedBattVoltageHistory, label="Adjusted")
     axs[0, 0].legend()
-    axs[0, 1].plot(history, board.temp2History, label="FET")
+    axs[0, 1].plot(history, board.temp2History, label="FET", color="tab:olive")
     axs[0, 1].legend()
-    axs[1, 0].plot(history, board.currentHistory)
-    axs[1, 1].plot(history, board.powerHistory)
-    axs[2, 0].plot(board.timeHistory, board.mAhHistory)
-    axs[2, 1].plot(board.timeHistory, board.mWhHistory)
+    axs[1, 0].plot(history, board.currentHistory, color="tab:green")
+    axs[1, 1].plot(history, board.powerHistory, color="tab:purple")
+    axs[2, 0].plot(board.timeHistory, board.mAhHistory, color="tab:red")
+    axs[2, 1].plot(board.timeHistory, board.mWhHistory, color="tab:pink")
 
     axs[0, 0].set_title("Batt Voltage")
     axs[0, 1].set_title("Temperatures")
@@ -278,7 +278,7 @@ def updatePlot():
 
     axs[0, 0].set_xlabel(axisLabel)
     axs[0, 0].set_ylabel("Volts")
-    axs[0, 1].set_xlabel("Time (s)")
+    axs[0, 1].set_xlabel(axisLabel)
     axs[0, 1].set_ylabel("Degrees (C)")
     axs[1, 0].set_xlabel(axisLabel)
     axs[1, 0].set_ylabel("mA")
@@ -457,7 +457,7 @@ def getESR(current=100):
 
 
 def startConstCurntDraw():
-    global startTime, runningTest
+    global startTime, runningTest, stopTest
     constCurntStartButton["text"] = "Working"
     constCurntStartButton["state"] = "disabled"
     constCurntValue["state"] = "disabled"
@@ -509,7 +509,7 @@ def stopConstCurntDraw():
 
 
 def startConstPwrDraw():
-    global startTime, runningTest
+    global startTime, runningTest, stopTest
     constPwrStartButton["text"] = "Working"
     constPwrStartButton["state"] = "disabled"
     constPwrValue["state"] = "disabled"
@@ -560,8 +560,7 @@ def stopConstPwrDraw():
     runningTest = None
 
 
-def stopTest():
-    pass
+stopTest = lambda: None
 
 
 def updateStatus(msg: str) -> None:
