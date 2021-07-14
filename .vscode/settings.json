@@ -5,9 +5,9 @@
         "reportMissingModuleSource": "none"
     },
     "python.analysis.extraPaths": [
-        "c:\\Users\\rhett\\.vscode\\extensions\\joedevivo.vscode-circuitpython-0.1.13\\boards\\0x239A\\0x8015",
-        "c:\\Users\\rhett\\.vscode\\extensions\\joedevivo.vscode-circuitpython-0.1.13\\stubs",
-        "c:\\Users\\rhett\\AppData\\Roaming\\Code\\User\\globalStorage\\joedevivo.vscode-circuitpython\\bundle\\20210601\\adafruit-circuitpython-bundle-py-20210601\\lib"
+        "/Users/adinack/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.13/boards/0x239A/0x8015",
+        "/Users/adinack/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.13/stubs",
+        "/Users/adinack/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20210713/adafruit-circuitpython-bundle-py-20210713/lib"
     ],
     "circuitpython.board.version": null,
     "circuitpython.board.vid": "0x239A",

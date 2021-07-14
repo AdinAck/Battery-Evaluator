@@ -11,6 +11,7 @@ import threading
 import serial
 from serial.tools import list_ports
 from dataclasses import dataclass
+from tkinter import messagebox
 from tkinter import *
 from tkinter.ttk import *
 import matplotlib.pyplot as plt
@@ -65,9 +66,9 @@ def ioLoop():
 
 
 class SerCom:
-    def __init__(self):
-        self.deviceList = [str(d.device) for d in list_ports.comports()]
-        self.lock = threading.Lock()
+    @property
+    def deviceList(self):
+        return [str(d.device) for d in list_ports.comports()]
 
     def connect(self, comport: str) -> None:
         self.com = serial.Serial(comport, 9600)
@@ -248,17 +249,13 @@ class BattEval:
 
 
 def updatePlot():
-    global plotUpdating
+    global plotUpdating, test, history, axisLabel
 
     plotUpdating = True
     for ax in axs.flat:
         ax.cla()
         ax.grid()
 
-    test = runningTest == "Current"
-
-    history = board.mAhHistory if test else board.mWhHistory
-    axisLabel = "mAh" if test else "mWh"
     axs[0, 0].plot(history, board.battVoltageHistory, label="Measured")
     axs[0, 0].plot(history, board.adjustedBattVoltageHistory, label="Adjusted")
     axs[0, 0].legend()
@@ -266,8 +263,12 @@ def updatePlot():
     axs[0, 1].legend()
     axs[1, 0].plot(history, board.currentHistory, color="tab:green")
     axs[1, 1].plot(history, board.powerHistory, color="tab:purple")
-    axs[2, 0].plot(board.timeHistory, board.mAhHistory, color="tab:red")
-    axs[2, 1].plot(board.timeHistory, board.mWhHistory, color="tab:pink")
+    axs[2, 0].plot(
+        board.timeHistory if test else history, board.mAhHistory, color="tab:red"
+    )
+    axs[2, 1].plot(
+        history if test else board.timeHistory, board.mWhHistory, color="tab:pink"
+    )
 
     axs[0, 0].set_title("Batt Voltage")
     axs[0, 1].set_title("Temperatures")
@@ -284,9 +285,9 @@ def updatePlot():
     axs[1, 0].set_ylabel("mA")
     axs[1, 1].set_xlabel(axisLabel)
     axs[1, 1].set_ylabel("mW")
-    axs[2, 0].set_xlabel("Time (s)")
+    axs[2, 0].set_xlabel("Time (s)" if test else axisLabel)
     axs[2, 0].set_ylabel("mAh")
-    axs[2, 1].set_xlabel("Time (s)")
+    axs[2, 1].set_xlabel(axisLabel if test else "Time (s)")
     axs[2, 1].set_ylabel("mWh")
 
     fig.tight_layout(pad=1)
@@ -434,6 +435,7 @@ def getESR(current=100):
     startV /= 50
 
     ser.battCurrent = current
+
     for _ in range(50):
         endV += ser.battVoltage
 
@@ -456,8 +458,38 @@ def getESR(current=100):
     updateStatus("Done.")
 
 
+def startTest(mode: str) -> None:  # sourcery skip: extract-duplicate-method
+    global runningTest
+
+    board.battVoltageHistory = []
+    board.adjustedBattVoltageHistory = []
+    board.currentHistory = []
+    board.powerHistory = []
+    # ser.temp1History = []
+    board.temp2History = []
+    board.mAhHistory = []
+    board.mWhHistory = []
+    board.timeHistory = []
+    for ax in axs.flat:
+        ax.clear()
+
+    updateStatus("Test started.")
+    runningTest = mode
+    updateAxisLabel()
+
+    if ser.battVoltage < BATT_CHEMS[chemString.get()][1]:
+        msg = "Battery not full, test may be inconclusive."
+        messagebox.showwarning("Warning", msg)
+        updateStatus(f"[WARNING] {msg}")
+
+    if board.FETTemp > 40:
+        msg = "High ambient temperature, power draw may be limited."
+        messagebox.showwarning("Warning", msg)
+        updateStatus(f"[WARNING] {msg}")
+
+
 def startConstCurntDraw():
-    global startTime, runningTest, stopTest
+    global startTime, stopTest
     constCurntStartButton["text"] = "Working"
     constCurntStartButton["state"] = "disabled"
     constCurntValue["state"] = "disabled"
@@ -476,23 +508,8 @@ def startConstCurntDraw():
     constCurntStartButton["text"] = "Stop"
     stopTest = stopConstCurntDraw
     constCurntStartButton["command"] = stopTest
-    board.battVoltageHistory = []
-    board.adjustedBattVoltageHistory = []
-    board.currentHistory = []
-    board.powerHistory = []
-    # ser.temp1History = []
-    board.temp2History = []
-    board.mAhHistory = []
-    board.mWhHistory = []
-    board.timeHistory = []
-    for ax in axs.flat:
-        ax.clear()
 
-    updateStatus("Test started.")
-    runningTest = "Current"
-
-    if ser.battVoltage < BATT_CHEMS[chemString.get()][1]:
-        updateStatus("[WARNING] Battery not full, test may be inconclusive.")
+    startTest("Current")
 
 
 def stopConstCurntDraw():
@@ -509,7 +526,7 @@ def stopConstCurntDraw():
 
 
 def startConstPwrDraw():
-    global startTime, runningTest, stopTest
+    global startTime, stopTest
     constPwrStartButton["text"] = "Working"
     constPwrStartButton["state"] = "disabled"
     constPwrValue["state"] = "disabled"
@@ -528,23 +545,8 @@ def startConstPwrDraw():
     constPwrStartButton["text"] = "Stop"
     stopTest = stopConstPwrDraw
     constPwrStartButton["command"] = stopTest
-    board.battVoltageHistory = []
-    board.adjustedBattVoltageHistory = []
-    board.currentHistory = []
-    board.powerHistory = []
-    # ser.temp1History = []
-    board.temp2History = []
-    board.mAhHistory = []
-    board.mWhHistory = []
-    board.timeHistory = []
-    for ax in axs.flat:
-        ax.clear()
 
-    updateStatus("Test started.")
-    runningTest = "Power"
-
-    if ser.battVoltage < BATT_CHEMS[chemString.get()][1]:
-        updateStatus("[WARNING] Battery not full, test may be inconclusive.")
+    startTest("Power")
 
 
 def stopConstPwrDraw():
@@ -568,6 +570,14 @@ def updateStatus(msg: str) -> None:
     if len(status) > 5:
         status.pop(0)
     statusString.set("\n".join(status))
+
+
+def updateAxisLabel():
+    global test, history, axisLabel
+    test = runningTest == "Current"
+
+    history = board.mAhHistory if test else board.mWhHistory
+    axisLabel = "mAh" if test else "mWh"
 
 
 status: List[str] = [""] * 5
@@ -736,6 +746,7 @@ fig.tight_layout(pad=1)
 canvas = FigureCanvasTkAgg(fig, master=middle)
 canvas._tkcanvas.pack()
 
+updateAxisLabel()
 updatePlot()
 
 mainloop()
