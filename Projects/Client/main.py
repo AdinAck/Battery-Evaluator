@@ -21,6 +21,7 @@ from time import time, time_ns, sleep
 from datetime import timedelta
 from typing import *
 
+
 COMMAND_DICT = {
     "batt-voltage": 0x10,
     "current": 0x11,
@@ -37,6 +38,7 @@ SHUTDOWN_TEMP = 60
 
 tasksReady = threading.Condition()
 taskQueue = Queue()
+guiUpdateQueue = Queue()
 
 
 class TaskResult:
@@ -71,6 +73,12 @@ def ioLoop():
             disconnect()
         with c:
             c.notify()
+
+
+def guiLoop() -> NoReturn:
+    while True:
+        item, attr, value = guiUpdateQueue.get()
+        item[attr] = value
 
 
 class SerCom:
@@ -191,19 +199,19 @@ class BattEval:
             if not self.throttling and self.FETTemp > THROTTLE_TEMP:
                 self.throttling = True
                 updateStatus("[WARNING] Thermal throttling.")
-                temp2Value["foreground"] = "orange"
+                guiUpdateQueue.put((temp2Value, "foreground", "orange"))
             elif self.throttling and self.FETTemp < THROTTLE_TEMP:
                 self.throttling = False
                 updateStatus("No longer thermal throttling.")
-                temp2Value["foreground"] = "black"
+                guiUpdateQueue.put((temp2Value, "foreground", "black"))
             elif self.FETTemp > SHUTDOWN_TEMP:
                 updateStatus("[WARNING] Shutdown temperature reached.")
-                temp2Value["foreground"] = "red"
+                guiUpdateQueue.put((temp2Value, "foreground", "red"))
             FETTempString.set(f"{self.FETTemp}C")
 
             # battery voltage stuff
             if self.battVoltage > 0.1:
-                battVoltageValue["foreground"] = "green"
+                guiUpdateQueue.put((battVoltageValue, "foreground", "green"))
                 battString.set(f"{self.battVoltage}v")
                 currentString.set(f"{self.battCurrent}mA")
                 if start is not None:
@@ -268,16 +276,20 @@ class BattEval:
                         notReady()
                         self.ableToTest = False
                 if chemString.get() == "Custom":
-                    startLabel["state"] = "normal"
-                    startValue["state"] = "normal"
-                    endLabel["state"] = "normal"
-                    endValue["state"] = "normal"
+                    guiUpdateQueue.put((startLabel, "state", "normal"))
+                    guiUpdateQueue.put((startValue, "state", "normal"))
+                    guiUpdateQueue.put((endLabel, "state", "normal"))
+                    guiUpdateQueue.put((endValue, "state", "normal"))
                 elif chemString.get() != "-":
+                    guiUpdateQueue.put((startLabel, "state", "disabled"))
+                    guiUpdateQueue.put((startValue, "state", "disabled"))
+                    guiUpdateQueue.put((endLabel, "state", "disabled"))
+                    guiUpdateQueue.put((endValue, "state", "disabled"))
                     startString.set(BATT_CHEMS[chemString.get()][1])
                     endString.set(BATT_CHEMS[chemString.get()][0])
 
             else:
-                battVoltageValue["foreground"] = "red"
+                guiUpdateQueue.put((battVoltageValue, "foreground", "red"))
                 battString.set("No Battery Connected")
                 if self.ableToTest:
                     notReady()
@@ -477,14 +489,14 @@ def getESR(current=100, depth=50):
         (sorted(startV)[depth // 2] - sorted(endV)[depth // 2]) * (1000 / current), 3
     )  # really is not very accurate
 
+    guiUpdateQueue.put((ESRLabel, "state", "normal"))
+
     if result > 0:
-        ESRLabel["state"] = "normal"
-        ESRValue["foreground"] = "black"
+        guiUpdateQueue.put((ESRValue, "foreground", "black"))
         ESRString.set(f"{int(result * 1000)} mOhms")
         board.battESR = result
     else:
-        ESRLabel["state"] = "normal"
-        ESRValue["foreground"] = "red"
+        guiUpdateQueue.put((ESRValue, "foreground", "red"))
         ESRString.set("Fault")
         messagebox.showerror("Error", "Device is not functioning properly.")
 
@@ -634,6 +646,7 @@ def resetCumulatives() -> None:
     board.mWh = 0
 
 
+startTime = time()
 status: List[str] = [""] * 5
 runningTest = None
 plotUpdating = False
@@ -641,6 +654,7 @@ plotUpdating = False
 ser = SerCom()
 
 threading.Thread(target=ioLoop, daemon=True).start()
+threading.Thread(target=guiLoop, daemon=True).start()
 
 
 # set up gui
