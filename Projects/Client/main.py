@@ -10,14 +10,14 @@ Adin Ackerman
 import threading
 import serial
 from serial.tools import list_ports
-from dataclasses import dataclass
+from serial.serialutil import SerialException
 from tkinter import messagebox
 from tkinter import *
 from tkinter.ttk import *
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from queue import Queue
-from time import time, time_ns
+from time import time, time_ns, sleep
 from datetime import timedelta
 from typing import *
 
@@ -30,13 +30,15 @@ COMMAND_DICT = {
     "set-power": 0x21,
 }
 
-BATT_CHEMS = {"Lithium": (3.5, 4.1), "Alkaline": (1.2, 1.5), "Custom": (2.75, 4.1)}
+BATT_CHEMS = {"Lithium": (3, 4.1), "Alkaline": (1.2, 1.5), "Custom": (5, 5)}
+
+THROTTLE_TEMP = 50
+SHUTDOWN_TEMP = 60
 
 tasksReady = threading.Condition()
 taskQueue = Queue()
 
 
-@dataclass
 class TaskResult:
     value: Any = None
 
@@ -60,21 +62,31 @@ def ioTask(f):
 def ioLoop():
     while True:
         r, c, task = taskQueue.get()
-        r.value = task()
+        try:
+            r.value = task()
+        except SerialException:
+            msg = "Communication interrupted."
+            messagebox.showerror("Error", msg)
+            updateStatus("[ERROR] " + msg)
+            disconnect()
         with c:
             c.notify()
 
 
 class SerCom:
+    connected = False
+
     @property
     def deviceList(self):
         return [str(d.device) for d in list_ports.comports()]
 
     def connect(self, comport: str) -> None:
         self.com = serial.Serial(comport, 9600)
+        self.connected = True
 
     def close(self):
         self.com.close()
+        self.conected = False
 
     @property
     @ioTask
@@ -102,6 +114,7 @@ class SerCom:
         msg = int.to_bytes(value, 2, "big")
         self.com.write(bytes([COMMAND_DICT["set-current"], 2]))
         self.com.write(msg)
+        print("set-current", value)
 
     @property
     @ioTask
@@ -114,6 +127,7 @@ class SerCom:
         msg = int.to_bytes(value, 2, "big")
         self.com.write(bytes([COMMAND_DICT["set-power"], 2]))
         self.com.write(msg)
+        print("set-power", value)
 
     @property
     @ioTask
@@ -158,27 +172,40 @@ class BattEval:
 
         self.ableToTest = False
         self.belowStopPointCount = 0
+        self.throttling = False
 
     def start(self) -> None:
-        threading.Thread(target=self.main, daemon=True).start()
+        self.thread = threading.Thread(target=self.main, daemon=True)
+        self.thread.start()
 
-    def main(self) -> NoReturn:
+    def main(self) -> None:
         global startTime
 
         start: Optional[float] = None
 
-        while True:
+        while ser.connected:
             self.battVoltage = ser.battVoltage
             self.battCurrent = ser.battCurrent
             self.FETTemp = ser.FETTemp
 
-            FETTempString.set(str(self.FETTemp))
+            if not self.throttling and self.FETTemp > THROTTLE_TEMP:
+                self.throttling = True
+                updateStatus("[WARNING] Thermal throttling.")
+                temp2Value["foreground"] = "orange"
+            elif self.throttling and self.FETTemp < THROTTLE_TEMP:
+                self.throttling = False
+                updateStatus("No longer thermal throttling.")
+                temp2Value["foreground"] = "black"
+            elif self.FETTemp > SHUTDOWN_TEMP:
+                updateStatus("[WARNING] Shutdown temperature reached.")
+                temp2Value["foreground"] = "red"
+            FETTempString.set(f"{self.FETTemp}C")
 
             # battery voltage stuff
             if self.battVoltage > 0.1:
                 battVoltageValue["foreground"] = "green"
-                battString.set(str(self.battVoltage) + "v")
-                currentString.set(str(self.battCurrent))
+                battString.set(f"{self.battVoltage}v")
+                currentString.set(f"{self.battCurrent}mA")
                 if start is not None:
                     dt = time_ns() - start  # ns
                 else:
@@ -189,8 +216,8 @@ class BattEval:
                 self.mWh += self.battCurrent * self.battVoltage * dt / 10 ** (9) / 3600
                 start = time_ns()
 
-                mAhString.set(str(int(self.mAh)))
-                mWhString.set(str(int(self.mWh)))
+                mAhString.set(f"{round(self.mAh, 1)}")
+                mWhString.set(f"{round(self.mWh, 1)}")
 
                 offset = self.battESR * self.battCurrent / 1000
 
@@ -229,7 +256,7 @@ class BattEval:
                     else:
                         self.belowStopPointCount = 0
 
-                    if self.belowStopPointCount > 50:
+                    if self.belowStopPointCount > 10:
                         stopTest()
 
                 if chemString.get() != "-":
@@ -240,6 +267,15 @@ class BattEval:
                     if self.ableToTest:
                         notReady()
                         self.ableToTest = False
+                if chemString.get() == "Custom":
+                    startLabel["state"] = "normal"
+                    startValue["state"] = "normal"
+                    endLabel["state"] = "normal"
+                    endValue["state"] = "normal"
+                elif chemString.get() != "-":
+                    startString.set(BATT_CHEMS[chemString.get()][1])
+                    endString.set(BATT_CHEMS[chemString.get()][0])
+
             else:
                 battVoltageValue["foreground"] = "red"
                 battString.set("No Battery Connected")
@@ -291,49 +327,15 @@ def updatePlot():
     axs[2, 1].set_ylabel("mWh")
 
     fig.tight_layout(pad=1)
-    # axs[0, 1].plot(x, y, "tab:orange")
-    # axs[1, 0].plot(x, -y, "tab:green")
-    # axs[1, 1].plot(x, -y, "tab:red")
-    # ax1.cla()
-    # ax2.cla()
-    # ax1.grid()
-    # ax1.set_xlabel("mAh")
-    # ax1.set_ylabel("volts", color="tab:blue")
-    # ax2.set_ylabel("milliamps", color="tab:green")
-    # ax1.plot(
-    #     board.mAhHistory,
-    #     board.battVoltageHistory,
-    #     label="Batt Voltage",
-    #     color="tab:blue",
-    # )
-    # ax1.plot(
-    #     board.mAhHistory,
-    #     board.adjustedBattVoltageHistory,
-    #     label="Adj Batt Voltage",
-    #     color="tab:orange",
-    # )
-    # ax2.plot(
-    #     board.mAhHistory,
-    #     board.currentHistory[-len(board.battVoltageHistory) :],
-    #     label="Current Draw",
-    #     color="tab:green",
-    # )
-    # # if chemString.get() != "Custom":
-    # #     ax1.set_ylim([BATT_CHEMS[chemString.get()][0],
-    # #                   BATT_CHEMS[chemString.get()][1]])
-    # # else:
-    # #     ax1.set_ylim([0, 5])
-    # ax2.set_ylim([0, 1000])
 
     canvas.draw()
-    # canvas.flush_events()
 
     plotUpdating = False
 
 
 def connect():
     ser.connect(comportString.get())
-    connectButton["command"] = disconnect
+    connectButton["command"] = lambda: threading.Thread(target=disconnect).start()
     connectButton["text"] = "Disconnect"
     battVoltageLabel["state"] = "normal"
     battVoltageValue["state"] = "normal"
@@ -348,6 +350,8 @@ def connect():
 
 
 def disconnect():
+    ser.connected = False
+    board.thread.join()
     ser.close()
     connectButton["command"] = connect
     connectButton["text"] = "Connect"
@@ -377,6 +381,10 @@ def disconnect():
 
     battChemLabel["state"] = "disabled"
     battChemDrop["state"] = "disabled"
+    startLabel["state"] = "disabled"
+    startValue["state"] = "disabled"
+    endLabel["state"] = "disabled"
+    endValue["state"] = "disabled"
 
     board.ableToTest = False
 
@@ -384,12 +392,14 @@ def disconnect():
 
 
 def ready():
+    getESRButton["state"] = "normal"
     constCurntLabel["state"] = "normal"
     constCurntValue["state"] = "normal"
     constCurntStartButton["state"] = "normal"
     constPwrLabel["state"] = "normal"
     constPwrValue["state"] = "normal"
     constPwrStartButton["state"] = "normal"
+    resetButton["state"] = "normal"
 
     currentLabel["state"] = "normal"
     currentValue["state"] = "normal"
@@ -402,12 +412,18 @@ def ready():
 
 
 def notReady():
+    getESRButton["state"] = "disabled"
+    startLabel["state"] = "disabled"
+    startValue["state"] = "disabled"
+    endLabel["state"] = "disabled"
+    endValue["state"] = "disabled"
     constCurntLabel["state"] = "disabled"
     constCurntValue["state"] = "disabled"
     constCurntStartButton["state"] = "disabled"
     constPwrLabel["state"] = "disabled"
     constPwrValue["state"] = "disabled"
     constPwrStartButton["state"] = "disabled"
+    resetButton["state"] = "disabled"
 
     currentString.set("")
     mAhString.set("")
@@ -423,43 +439,64 @@ def notReady():
     updateStatus("Not ready to run tests, ensure battery is connected.")
 
 
-def getESR(current=100):
+def getESR(current=100, depth=50):
     updateStatus("Determining ESR...")
     ser.battCurrent = 0
-    startV = 0
-    endV = 0
+    startV = []
+    endV = []
+    EPSILON = 0
 
-    for _ in range(50):
-        startV += ser.battVoltage
+    popup = Toplevel()
+    popup.geometry("500x100")
+    Label(popup, text="Determining ESR").pack(side=TOP)
 
-    startV /= 50
+    progress = 0
+    progress_var = IntVar()
+    progress_bar = Progressbar(popup, variable=progress_var, maximum=depth * 2)
+    progress_bar.pack(fill=X, expand=1, side=BOTTOM, padx=10, pady=10)
+    popup.pack_slaves()
+
+    for _ in range(depth):
+        startV.append(ser.battVoltage)
+        progress += 1
+        progress_var.set(progress)
 
     ser.battCurrent = current
-
-    for _ in range(50):
-        endV += ser.battVoltage
+    while (c := ser.battCurrent) < current - EPSILON:
+        print("waiting for current", c)
+        sleep(0.1)
+    sleep(2)
+    for _ in range(depth):
+        endV.append(ser.battVoltage)
+        progress += 1
+        progress_var.set(progress)
 
     ser.battCurrent = 0
 
-    endV /= 50
-
-    result = (startV - endV) * (1000 / current)
+    result = round(
+        (sorted(startV)[depth // 2] - sorted(endV)[depth // 2]) * (1000 / current), 3
+    )  # really is not very accurate
 
     if result > 0:
         ESRLabel["state"] = "normal"
         ESRValue["foreground"] = "black"
-        ESRString.set(str(round(result, 3)))
-        board.battESR = round(result, 3)
+        ESRString.set(f"{int(result * 1000)} mOhms")
+        board.battESR = result
     else:
         ESRLabel["state"] = "normal"
         ESRValue["foreground"] = "red"
         ESRString.set("Fault")
+        messagebox.showerror("Error", "Device is not functioning properly.")
 
+    popup.destroy()
+    popup.update()
     updateStatus("Done.")
 
 
 def startTest(mode: str) -> None:  # sourcery skip: extract-duplicate-method
     global runningTest
+
+    resetButton["state"] = "disabled"
 
     board.battVoltageHistory = []
     board.adjustedBattVoltageHistory = []
@@ -470,8 +507,12 @@ def startTest(mode: str) -> None:  # sourcery skip: extract-duplicate-method
     board.mAhHistory = []
     board.mWhHistory = []
     board.timeHistory = []
+
     for ax in axs.flat:
         ax.clear()
+
+    if chemString.get() == "Custom":
+        BATT_CHEMS["Custom"] = float(endString.get()), float(startString.get())
 
     updateStatus("Test started.")
     runningTest = mode
@@ -496,10 +537,13 @@ def startConstCurntDraw():
     constPwrStartButton["state"] = "disabled"
     constPwrValue["state"] = "disabled"
     ESRValue["state"] = "disabled"
-    getESR()
+    if ESRString.get() == "":
+        getESR()
     ESRValue["state"] = "normal"
     timeLabel["state"] = "normal"
     timeValue["state"] = "normal"
+
+    startTest("Current")
 
     startTime = time()
 
@@ -509,17 +553,18 @@ def startConstCurntDraw():
     stopTest = stopConstCurntDraw
     constCurntStartButton["command"] = stopTest
 
-    startTest("Current")
-
 
 def stopConstCurntDraw():
     global runningTest
     ser.battCurrent = 0
     constCurntStartButton["text"] = "Start"
-    constCurntStartButton["command"] = startConstCurntDraw
+    constCurntStartButton["command"] = lambda: threading.Thread(
+        target=startConstCurntDraw
+    ).start()
     constCurntValue["state"] = "normal"
     constPwrStartButton["state"] = "normal"
     constPwrValue["state"] = "normal"
+    resetButton["state"] = "normal"
 
     updateStatus("Test ended.")
     runningTest = None
@@ -533,10 +578,13 @@ def startConstPwrDraw():
     constCurntStartButton["state"] = "disabled"
     constCurntValue["state"] = "disabled"
     ESRValue["state"] = "disabled"
-    getESR()
+    if ESRString.get() == "":
+        getESR()
     ESRValue["state"] = "normal"
     timeLabel["state"] = "normal"
     timeValue["state"] = "normal"
+
+    startTest("Power")
 
     startTime = time()
 
@@ -546,17 +594,18 @@ def startConstPwrDraw():
     stopTest = stopConstPwrDraw
     constPwrStartButton["command"] = stopTest
 
-    startTest("Power")
-
 
 def stopConstPwrDraw():
     global runningTest
     ser.battCurrent = 0
     constPwrStartButton["text"] = "Start"
-    constPwrStartButton["command"] = startConstPwrDraw
+    constPwrStartButton["command"] = lambda: threading.Thread(
+        target=startConstPwrDraw
+    ).start()
     constPwrValue["state"] = "normal"
     constCurntStartButton["state"] = "normal"
     constCurntValue["state"] = "normal"
+    resetButton["state"] = "normal"
 
     updateStatus("Test ended.")
     runningTest = None
@@ -580,6 +629,11 @@ def updateAxisLabel():
     axisLabel = "mAh" if test else "mWh"
 
 
+def resetCumulatives() -> None:
+    board.mAh = 0
+    board.mWh = 0
+
+
 status: List[str] = [""] * 5
 runningTest = None
 plotUpdating = False
@@ -595,6 +649,8 @@ root.title("Battery Evaluator Client")
 
 comportString = StringVar()
 chemString = StringVar()
+startString = StringVar()
+endString = StringVar()
 constCurntString = StringVar()
 constPwrString = StringVar()
 battString = StringVar()
@@ -650,29 +706,64 @@ battChemDrop = OptionMenu(left, chemString, "-", *BATT_CHEMS)
 battChemDrop.grid(row=2, column=1, padx=5, pady=5, sticky="W")
 battChemDrop["state"] = "disabled"
 
-constCurntLabel = Label(left, text="Constant Current\nDischarge Test:")
-constCurntLabel.grid(row=3, column=0, padx=5, pady=5, sticky="W")
+startLabel = Label(left, text="Full (v):")
+startLabel.grid(row=3, column=0, padx=5, pady=5, sticky="W")
+startLabel["state"] = "disabled"
+
+startValue = Entry(left, textvariable=startString, width=4)
+startValue.grid(row=3, column=1, padx=5, pady=5, sticky="W")
+startValue["state"] = "disabled"
+
+endLabel = Label(left, text="Empty (v):")
+endLabel.grid(row=4, column=0, padx=5, pady=5, sticky="W")
+endLabel["state"] = "disabled"
+
+endValue = Entry(left, textvariable=endString, width=4)
+endValue.grid(row=4, column=1, padx=5, pady=5, sticky="W")
+endValue["state"] = "disabled"
+
+
+getESRButton = Button(
+    left, text="Get ESR", command=lambda: threading.Thread(target=getESR).start()
+)
+getESRButton.grid(row=5, column=1, sticky="W")
+getESRButton["state"] = "disabled"
+
+constCurntLabel = Label(left, text="Constant Current\nDischarge Test (mA):")
+constCurntLabel.grid(row=6, column=0, padx=5, pady=5, sticky="W")
 constCurntLabel["state"] = "disabled"
 
 constCurntValue = Entry(left, textvariable=constCurntString, width=10)
-constCurntValue.grid(row=3, column=1, padx=5, pady=5, sticky="SW")
+constCurntValue.grid(row=6, column=1, padx=5, pady=5, sticky="SW")
 constCurntValue["state"] = "disabled"
 
-constCurntStartButton = Button(left, text="Start", command=startConstCurntDraw)
-constCurntStartButton.grid(row=4, column=1, padx=5, pady=5, sticky="W")
+constCurntStartButton = Button(
+    left,
+    text="Start",
+    command=lambda: threading.Thread(target=startConstCurntDraw).start(),
+)
+constCurntStartButton.grid(row=7, column=1, padx=5, pady=5, sticky="W")
 constCurntStartButton["state"] = "disabled"
 
-constPwrLabel = Label(left, text="Constant Power\nDischarge Test:")
-constPwrLabel.grid(row=5, column=0, padx=5, pady=5, sticky="W")
+constPwrLabel = Label(left, text="Constant Power\nDischarge Test (mW):")
+constPwrLabel.grid(row=8, column=0, padx=5, pady=5, sticky="W")
 constPwrLabel["state"] = "disabled"
 
 constPwrValue = Entry(left, textvariable=constPwrString, width=10)
-constPwrValue.grid(row=5, column=1, padx=5, pady=5, sticky="SW")
+constPwrValue.grid(row=8, column=1, padx=5, pady=5, sticky="SW")
 constPwrValue["state"] = "disabled"
 
-constPwrStartButton = Button(left, text="Start", command=startConstPwrDraw)
-constPwrStartButton.grid(row=6, column=1, padx=5, pady=5, sticky="W")
+constPwrStartButton = Button(
+    left,
+    text="Start",
+    command=lambda: threading.Thread(target=startConstPwrDraw).start(),
+)
+constPwrStartButton.grid(row=9, column=1, padx=5, pady=5, sticky="W")
 constPwrStartButton["state"] = "disabled"
+
+resetButton = Button(left, text="Reset Cumulatives", command=resetCumulatives)
+resetButton.grid(row=10, column=1, padx=5, pady=5, sticky="W")
+resetButton["state"] = "disabled"
 
 # Measurements
 battVoltageLabel = Label(right, text="Batt voltage:")
@@ -699,7 +790,7 @@ temp1Value = Entry(right, textvariable=resistorTempString, width=10)
 temp1Value.grid(row=2, column=1, padx=5, pady=5, sticky="W")
 temp1Value["state"] = "disabled"
 
-temp2Label = Label(right, text="MOS Temp:")
+temp2Label = Label(right, text="FET Temp:")
 temp2Label.grid(row=3, column=0, padx=5, pady=5, sticky="W")
 temp2Label["state"] = "disabled"
 
