@@ -21,7 +21,6 @@ from time import time, time_ns, sleep
 from datetime import timedelta
 from typing import *
 
-
 COMMAND_DICT = {
     "batt-voltage": 0x10,
     "current": 0x11,
@@ -38,7 +37,6 @@ SHUTDOWN_TEMP = 60
 
 tasksReady = threading.Condition()
 taskQueue = Queue()
-guiUpdateQueue = Queue()
 
 
 class TaskResult:
@@ -73,12 +71,6 @@ def ioLoop():
             disconnect()
         with c:
             c.notify()
-
-
-def guiLoop() -> NoReturn:
-    while True:
-        item, attr, value = guiUpdateQueue.get()
-        item[attr] = value
 
 
 class SerCom:
@@ -199,19 +191,19 @@ class BattEval:
             if not self.throttling and self.FETTemp > THROTTLE_TEMP:
                 self.throttling = True
                 updateStatus("[WARNING] Thermal throttling.")
-                guiUpdateQueue.put((temp2Value, "foreground", "orange"))
+                temp2Value["foreground"] = "orange"
             elif self.throttling and self.FETTemp < THROTTLE_TEMP:
                 self.throttling = False
                 updateStatus("No longer thermal throttling.")
-                guiUpdateQueue.put((temp2Value, "foreground", "black"))
+                temp2Value["foreground"] = "white"
             elif self.FETTemp > SHUTDOWN_TEMP:
                 updateStatus("[WARNING] Shutdown temperature reached.")
-                guiUpdateQueue.put((temp2Value, "foreground", "red"))
+                temp2Value["foreground"] = "red"
             FETTempString.set(f"{self.FETTemp}C")
 
             # battery voltage stuff
             if self.battVoltage > 0.1:
-                guiUpdateQueue.put((battVoltageValue, "foreground", "green"))
+                battVoltageValue["foreground"] = "green"
                 battString.set(f"{self.battVoltage}v")
                 currentString.set(f"{self.battCurrent}mA")
                 if start is not None:
@@ -254,7 +246,7 @@ class BattEval:
                         self.mAhHistory.append(int(self.mAh))
                         self.mWhHistory.append(int(self.mWh))
                         self.timeHistory.append(round(time() - startTime))
-                        if not plotUpdating:
+                        if not plotUpdating and root.focus_displayof() is not None:
                             threading.Thread(target=updatePlot).start()
 
                     timeString.set(str(timedelta(seconds=round(time() - startTime))))
@@ -276,20 +268,20 @@ class BattEval:
                         notReady()
                         self.ableToTest = False
                 if chemString.get() == "Custom":
-                    guiUpdateQueue.put((startLabel, "state", "normal"))
-                    guiUpdateQueue.put((startValue, "state", "normal"))
-                    guiUpdateQueue.put((endLabel, "state", "normal"))
-                    guiUpdateQueue.put((endValue, "state", "normal"))
+                    startLabel["state"] = "normal"
+                    startValue["state"] = "normal"
+                    endLabel["state"] = "normal"
+                    endValue["state"] = "normal"
                 elif chemString.get() != "-":
-                    guiUpdateQueue.put((startLabel, "state", "disabled"))
-                    guiUpdateQueue.put((startValue, "state", "disabled"))
-                    guiUpdateQueue.put((endLabel, "state", "disabled"))
-                    guiUpdateQueue.put((endValue, "state", "disabled"))
+                    startLabel["state"] = "disabled"
+                    startValue["state"] = "disabled"
+                    endLabel["state"] = "disabled"
+                    endValue["state"] = "disabled"
                     startString.set(BATT_CHEMS[chemString.get()][1])
                     endString.set(BATT_CHEMS[chemString.get()][0])
 
             else:
-                guiUpdateQueue.put((battVoltageValue, "foreground", "red"))
+                battVoltageValue["foreground"] = "red"
                 battString.set("No Battery Connected")
                 if self.ableToTest:
                     notReady()
@@ -302,7 +294,7 @@ def updatePlot():
     plotUpdating = True
     for ax in axs.flat:
         ax.cla()
-        ax.grid()
+        ax.grid(color="grey")
 
     axs[0, 0].plot(history, board.battVoltageHistory, label="Measured")
     axs[0, 0].plot(history, board.adjustedBattVoltageHistory, label="Adjusted")
@@ -318,29 +310,29 @@ def updatePlot():
         history if test else board.timeHistory, board.mWhHistory, color="tab:pink"
     )
 
-    axs[0, 0].set_title("Batt Voltage")
-    axs[0, 1].set_title("Temperatures")
-    axs[1, 0].set_title("Current Draw")
-    axs[1, 1].set_title("Power Draw")
-    axs[2, 0].set_title("Capacity (mAh)")
-    axs[2, 1].set_title("Capacity (mWh)")
+    axs[0, 0].set_title("Batt Voltage", color="white")
+    axs[0, 1].set_title("Temperatures", color="white")
+    axs[1, 0].set_title("Current Draw", color="white")
+    axs[1, 1].set_title("Power Draw", color="white")
+    axs[2, 0].set_title("Capacity (mAh)", color="white")
+    axs[2, 1].set_title("Capacity (mWh)", color="white")
 
-    axs[0, 0].set_xlabel(axisLabel)
-    axs[0, 0].set_ylabel("Volts")
-    axs[0, 1].set_xlabel(axisLabel)
-    axs[0, 1].set_ylabel("Degrees (C)")
-    axs[1, 0].set_xlabel(axisLabel)
-    axs[1, 0].set_ylabel("mA")
-    axs[1, 1].set_xlabel(axisLabel)
-    axs[1, 1].set_ylabel("mW")
-    axs[2, 0].set_xlabel("Time (s)" if test else axisLabel)
-    axs[2, 0].set_ylabel("mAh")
-    axs[2, 1].set_xlabel(axisLabel if test else "Time (s)")
-    axs[2, 1].set_ylabel("mWh")
+    axs[0, 0].set_xlabel(axisLabel, color="white")
+    axs[0, 0].set_ylabel("Volts", color="white")
+    axs[0, 1].set_xlabel(axisLabel, color="white")
+    axs[0, 1].set_ylabel("Degrees (C)", color="white")
+    axs[1, 0].set_xlabel(axisLabel, color="white")
+    axs[1, 0].set_ylabel("mA", color="white")
+    axs[1, 1].set_xlabel(axisLabel, color="white")
+    axs[1, 1].set_ylabel("mW", color="white")
+    axs[2, 0].set_xlabel("Time (s)" if test else axisLabel, color="white")
+    axs[2, 0].set_ylabel("mAh", color="white")
+    axs[2, 1].set_xlabel(axisLabel if test else "Time (s)", color="white")
+    axs[2, 1].set_ylabel("mWh", color="white")
 
     fig.tight_layout(pad=1)
 
-    canvas.draw()
+    canvas.draw_idle()
 
     plotUpdating = False
 
@@ -451,12 +443,11 @@ def notReady():
     updateStatus("Not ready to run tests, ensure battery is connected.")
 
 
-def getESR(current=100, depth=50):
+def getESR(current=900, depth=50):
     updateStatus("Determining ESR...")
     ser.battCurrent = 0
     startV = []
     endV = []
-    EPSILON = 0
 
     popup = Toplevel()
     popup.geometry("500x100")
@@ -474,9 +465,19 @@ def getESR(current=100, depth=50):
         progress_var.set(progress)
 
     ser.battCurrent = current
-    while (c := ser.battCurrent) < current - EPSILON:
-        print("waiting for current", c)
+    i = 0
+    while (c := ser.battCurrent) < current:
         sleep(0.1)
+
+        if i > 25:
+            ESRValue["foreground"] = "red"
+            ESRString.set("Fault")
+            popup.destroy()
+            popup.update()
+            messagebox.showerror("Error", "Device is not functioning properly.")
+            return
+
+        i += 1
     sleep(2)
     for _ in range(depth):
         endV.append(ser.battVoltage)
@@ -487,16 +488,16 @@ def getESR(current=100, depth=50):
 
     result = round(
         (sorted(startV)[depth // 2] - sorted(endV)[depth // 2]) * (1000 / current), 3
-    )  # really is not very accurate
+    )
 
-    guiUpdateQueue.put((ESRLabel, "state", "normal"))
+    ESRLabel["state"] = "normal"
 
     if result > 0:
-        guiUpdateQueue.put((ESRValue, "foreground", "black"))
+        ESRValue["foreground"] = "white"
         ESRString.set(f"{int(result * 1000)} mOhms")
         board.battESR = result
     else:
-        guiUpdateQueue.put((ESRValue, "foreground", "red"))
+        ESRValue["foreground"] = "red"
         ESRString.set("Fault")
         messagebox.showerror("Error", "Device is not functioning properly.")
 
@@ -509,6 +510,24 @@ def startTest(mode: str) -> None:  # sourcery skip: extract-duplicate-method
     global runningTest
 
     resetButton["state"] = "disabled"
+    battChemLabel["state"] = "disabled"
+    battChemDrop["state"] = "disabled"
+
+    for ax in axs.flat:
+        ax.clear()
+
+    if chemString.get() == "Custom":
+        BATT_CHEMS["Custom"] = float(endString.get()), float(startString.get())
+
+    if ser.battVoltage < BATT_CHEMS[chemString.get()][1]:
+        msg = "Battery not full, test may be inconclusive."
+        messagebox.showwarning("Warning", msg)
+        updateStatus(f"[WARNING] {msg}")
+
+    if board.FETTemp > 40:
+        msg = "High ambient temperature, power draw may be limited."
+        messagebox.showwarning("Warning", msg)
+        updateStatus(f"[WARNING] {msg}")
 
     board.battVoltageHistory = []
     board.adjustedBattVoltageHistory = []
@@ -520,25 +539,9 @@ def startTest(mode: str) -> None:  # sourcery skip: extract-duplicate-method
     board.mWhHistory = []
     board.timeHistory = []
 
-    for ax in axs.flat:
-        ax.clear()
-
-    if chemString.get() == "Custom":
-        BATT_CHEMS["Custom"] = float(endString.get()), float(startString.get())
-
     updateStatus("Test started.")
     runningTest = mode
     updateAxisLabel()
-
-    if ser.battVoltage < BATT_CHEMS[chemString.get()][1]:
-        msg = "Battery not full, test may be inconclusive."
-        messagebox.showwarning("Warning", msg)
-        updateStatus(f"[WARNING] {msg}")
-
-    if board.FETTemp > 40:
-        msg = "High ambient temperature, power draw may be limited."
-        messagebox.showwarning("Warning", msg)
-        updateStatus(f"[WARNING] {msg}")
 
 
 def startConstCurntDraw():
@@ -654,8 +657,6 @@ plotUpdating = False
 ser = SerCom()
 
 threading.Thread(target=ioLoop, daemon=True).start()
-threading.Thread(target=guiLoop, daemon=True).start()
-
 
 # set up gui
 root = Tk()
@@ -735,7 +736,6 @@ endLabel["state"] = "disabled"
 endValue = Entry(left, textvariable=endString, width=4)
 endValue.grid(row=4, column=1, padx=5, pady=5, sticky="W")
 endValue["state"] = "disabled"
-
 
 getESRButton = Button(
     left, text="Get ESR", command=lambda: threading.Thread(target=getESR).start()
@@ -847,6 +847,10 @@ ESRValue["state"] = "disabled"
 fig, axs = plt.subplots(3, 2)
 fig.set_size_inches(8, 10)
 fig.tight_layout(pad=1)
+fig.patch.set_facecolor("xkcd:dark grey")
+
+for ax in axs.flat:
+    ax.set_facecolor("xkcd:black")
 
 canvas = FigureCanvasTkAgg(fig, master=middle)
 canvas._tkcanvas.pack()
