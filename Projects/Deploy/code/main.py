@@ -2,7 +2,6 @@ from board import *
 from busio import UART
 from digitalio import DigitalInOut, Direction
 from analogio import AnalogIn, AnalogOut
-from microcontroller import watchdog
 
 COMMAND_DICT = {
     "batt-voltage": 0x10,
