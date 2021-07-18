@@ -472,7 +472,6 @@ def getESR(current=900, depth=50):
         ser.battCurrent = current
         i = 0
         while (c := ser.battCurrent) < current:
-            print(c)
             sleep(0.1)
 
             if i > 25:
