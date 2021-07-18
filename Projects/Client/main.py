@@ -174,6 +174,8 @@ class BattEval:
         self.belowStopPointCount = 0
         self.throttling = False
 
+        self.lock = threading.Lock()
+
     def start(self) -> None:
         self.thread = threading.Thread(target=self.main, daemon=True)
         self.thread.start()
@@ -184,9 +186,10 @@ class BattEval:
         start: Optional[float] = None
 
         while ser.connected:
-            self.battVoltage = ser.battVoltage
-            self.battCurrent = ser.battCurrent
-            self.FETTemp = ser.FETTemp
+            with self.lock:
+                self.battVoltage = ser.battVoltage
+                self.battCurrent = ser.battCurrent
+                self.FETTemp = ser.FETTemp
 
             if not self.throttling and self.FETTemp > THROTTLE_TEMP:
                 self.throttling = True
@@ -267,18 +270,6 @@ class BattEval:
                     if self.ableToTest:
                         notReady()
                         self.ableToTest = False
-                if chemString.get() == "Custom":
-                    startLabel["state"] = "normal"
-                    startValue["state"] = "normal"
-                    endLabel["state"] = "normal"
-                    endValue["state"] = "normal"
-                elif chemString.get() != "-":
-                    startLabel["state"] = "disabled"
-                    startValue["state"] = "disabled"
-                    endLabel["state"] = "disabled"
-                    endValue["state"] = "disabled"
-                    startString.set(BATT_CHEMS[chemString.get()][1])
-                    endString.set(BATT_CHEMS[chemString.get()][0])
 
             else:
                 battVoltageValue["foreground"] = "red"
@@ -286,6 +277,19 @@ class BattEval:
                 if self.ableToTest:
                     notReady()
                     self.ableToTest = False
+
+            if chemString.get() == "Custom":
+                startLabel["state"] = "normal"
+                startValue["state"] = "normal"
+                endLabel["state"] = "normal"
+                endValue["state"] = "normal"
+            elif chemString.get() != "-":
+                startLabel["state"] = "disabled"
+                startValue["state"] = "disabled"
+                endLabel["state"] = "disabled"
+                endValue["state"] = "disabled"
+                startString.set(BATT_CHEMS[chemString.get()][1])
+                endString.set(BATT_CHEMS[chemString.get()][0])
 
 
 def updatePlot():
@@ -445,46 +449,49 @@ def notReady():
 
 def getESR(current=900, depth=50):
     updateStatus("Determining ESR...")
-    ser.battCurrent = 0
-    startV = []
-    endV = []
+    with board.lock:
+        ser.battCurrent = 0
+        startV = []
+        endV = []
 
-    popup = Toplevel()
-    popup.geometry("500x100")
-    Label(popup, text="Determining ESR").pack(side=TOP)
+        popup = Toplevel()
+        popup.geometry("500x100")
+        Label(popup, text="Determining ESR").pack(side=TOP)
 
-    progress = 0
-    progress_var = IntVar()
-    progress_bar = Progressbar(popup, variable=progress_var, maximum=depth * 2)
-    progress_bar.pack(fill=X, expand=1, side=BOTTOM, padx=10, pady=10)
-    popup.pack_slaves()
+        progress = 0
+        progress_var = IntVar()
+        progress_bar = Progressbar(popup, variable=progress_var, maximum=depth * 2)
+        progress_bar.pack(fill=X, expand=1, side=BOTTOM, padx=10, pady=10)
+        popup.pack_slaves()
 
-    for _ in range(depth):
-        startV.append(ser.battVoltage)
-        progress += 1
-        progress_var.set(progress)
+        for _ in range(depth):
+            startV.append(ser.battVoltage)
+            progress += 1
+            progress_var.set(progress)
 
-    ser.battCurrent = current
-    i = 0
-    while (c := ser.battCurrent) < current:
-        sleep(0.1)
+        ser.battCurrent = current
+        i = 0
+        while (c := ser.battCurrent) < current:
+            print(c)
+            sleep(0.1)
 
-        if i > 25:
-            ESRValue["foreground"] = "red"
-            ESRString.set("Fault")
-            popup.destroy()
-            popup.update()
-            messagebox.showerror("Error", "Device is not functioning properly.")
-            return
+            if i > 25:
+                ESRValue["foreground"] = "red"
+                ESRString.set("Fault")
+                popup.destroy()
+                popup.update()
+                messagebox.showerror("Error", "Device is not functioning properly.")
+                ser.battCurrent = 0
+                return
 
-        i += 1
-    sleep(2)
-    for _ in range(depth):
-        endV.append(ser.battVoltage)
-        progress += 1
-        progress_var.set(progress)
+            i += 1
+        sleep(2)
+        for _ in range(depth):
+            endV.append(ser.battVoltage)
+            progress += 1
+            progress_var.set(progress)
 
-    ser.battCurrent = 0
+        ser.battCurrent = 0
 
     result = round(
         (sorted(startV)[depth // 2] - sorted(endV)[depth // 2]) * (1000 / current), 3
@@ -509,9 +516,12 @@ def getESR(current=900, depth=50):
 def startTest(mode: str) -> None:
     global runningTest
 
-    resetButton["state"] = "disabled"
+    comDropLabel["state"] = "disabled"
+    comDrop["state"] = "disabled"
+    connectButton["state"] = "disabled"
     battChemLabel["state"] = "disabled"
     battChemDrop["state"] = "disabled"
+    resetButton["state"] = "disabled"
 
     for ax in axs.flat:
         ax.clear()
@@ -576,6 +586,9 @@ def stopConstCurntDraw():
     constCurntStartButton["command"] = lambda: threading.Thread(
         target=startConstCurntDraw
     ).start()
+    comDropLabel["state"] = "normal"
+    comDrop["state"] = "normal"
+    connectButton["state"] = "normal"
     constCurntValue["state"] = "normal"
     constPwrStartButton["state"] = "normal"
     constPwrValue["state"] = "normal"
@@ -617,6 +630,9 @@ def stopConstPwrDraw():
     constPwrStartButton["command"] = lambda: threading.Thread(
         target=startConstPwrDraw
     ).start()
+    comDropLabel["state"] = "normal"
+    comDrop["state"] = "normal"
+    connectButton["state"] = "normal"
     constPwrValue["state"] = "normal"
     constCurntStartButton["state"] = "normal"
     constCurntValue["state"] = "normal"

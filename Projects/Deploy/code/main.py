@@ -113,7 +113,7 @@ while True:
 
         outputCurrent = min(powerLimit / battValue, targetCurrent)
         error = int((outputCurrent - currentValue) * 2 ** 16 / 3.3)
-        output += error // 4
+        output += error
         output = min(max(output, 0), 2 ** 16 - 1)
         mos.value = output
 
