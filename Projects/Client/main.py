@@ -506,7 +506,7 @@ def getESR(current=900, depth=50):
     updateStatus("Done.")
 
 
-def startTest(mode: str) -> None:  # sourcery skip: extract-duplicate-method
+def startTest(mode: str) -> None:
     global runningTest
 
     resetButton["state"] = "disabled"
