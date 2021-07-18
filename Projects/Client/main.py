@@ -75,10 +75,11 @@ def ioLoop():
 
 class SerCom:
     connected = False
-
-    @property
-    def deviceList(self):
-        return [str(d.device) for d in list_ports.comports()]
+    ports: dict[str, str] = {
+        str(d.description): d.device
+        for d in list_ports.comports()
+        if d.description != "n/a"
+    }
 
     def connect(self, comport: str) -> None:
         self.com = serial.Serial(comport, 9600)
@@ -342,7 +343,7 @@ def updatePlot():
 
 
 def connect():
-    ser.connect(comportString.get())
+    ser.connect(ser.ports[comportString.get()])
     connectButton["command"] = lambda: threading.Thread(target=disconnect).start()
     connectButton["text"] = "Disconnect"
     battVoltageLabel["state"] = "normal"
@@ -447,7 +448,7 @@ def notReady():
     updateStatus("Not ready to run tests, ensure battery is connected.")
 
 
-def getESR(current=900, depth=50):
+def getESR(current=900, depth=10):
     updateStatus("Determining ESR...")
     with board.lock:
         ser.battCurrent = 0
@@ -472,8 +473,6 @@ def getESR(current=900, depth=50):
         ser.battCurrent = current
         i = 0
         while (c := ser.battCurrent) < current:
-            sleep(0.1)
-
             if i > 25:
                 ESRValue["foreground"] = "red"
                 ESRString.set("Fault")
@@ -484,7 +483,6 @@ def getESR(current=900, depth=50):
                 return
 
             i += 1
-        sleep(2)
         for _ in range(depth):
             endV.append(ser.battVoltage)
             progress += 1
@@ -722,7 +720,7 @@ statusLabel.pack(side=BOTTOM, padx=5, pady=5, anchor="w")
 comDropLabel = Label(left, text="Com Port:")
 comDropLabel.grid(row=0, column=0, padx=5, pady=5, sticky="W")
 
-comDrop = OptionMenu(left, comportString, "-", *ser.deviceList)
+comDrop = OptionMenu(left, comportString, "-", *ser.ports)
 comDrop.grid(row=0, column=1, padx=5, pady=5, sticky="W")
 
 connectButton = Button(left, text="Connect", command=connect)
