@@ -110,6 +110,8 @@ while True:
             powerLimit = max(0, min(MAX_POWER, calculatePowerLimit(temp2Value)))
         if MODE == "power":
             targetCurrent = targetPower / battValue
+        elif MODE == "current":
+            targetPower = targetCurrent * battValue
 
         outputCurrent = min(powerLimit / battValue, targetCurrent)
         error = int((outputCurrent - currentValue) * 2 ** 16 / 3.3)

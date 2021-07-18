@@ -75,14 +75,12 @@ def ioLoop():
 
 class SerCom:
     connected = False
-    ports: dict[str, str] = {
-        str(d.description): d.device
-        for d in list_ports.comports()
-        if d.description != "n/a"
+    ports = {
+        str(d.description): d for d in list_ports.comports() if d.description != "n/a"
     }
 
     def connect(self, comport: str) -> None:
-        self.com = serial.Serial(comport, 9600)
+        self.com = serial.Serial(self.ports[comport].device, 9600)
         self.connected = True
 
     def close(self):
@@ -343,7 +341,7 @@ def updatePlot():
 
 
 def connect():
-    ser.connect(ser.ports[comportString.get()])
+    ser.connect(comportString.get())
     connectButton["command"] = lambda: threading.Thread(target=disconnect).start()
     connectButton["text"] = "Disconnect"
     battVoltageLabel["state"] = "normal"
@@ -386,14 +384,23 @@ def disconnect():
     mWhLabel["state"] = "disabled"
     mWhValue["state"] = "disabled"
     ESRString.set("")
+    ESRLabel["state"] = "disabled"
     ESRValue["state"] = "disabled"
 
     battChemLabel["state"] = "disabled"
     battChemDrop["state"] = "disabled"
+    getESRButton["state"] = "disabled"
     startLabel["state"] = "disabled"
     startValue["state"] = "disabled"
     endLabel["state"] = "disabled"
     endValue["state"] = "disabled"
+    constCurntLabel["state"] = "disabled"
+    constCurntValue["state"] = "disabled"
+    constCurntStartButton["state"] = "disabled"
+    constPwrLabel["state"] = "disabled"
+    constPwrValue["state"] = "disabled"
+    constPwrStartButton["state"] = "disabled"
+    resetButton["state"] = "disabled"
 
     board.ableToTest = False
 
@@ -448,7 +455,7 @@ def notReady():
     updateStatus("Not ready to run tests, ensure battery is connected.")
 
 
-def getESR(current=900, depth=10):
+def getESR(current=900, depth=50):
     updateStatus("Determining ESR...")
     with board.lock:
         ser.battCurrent = 0
@@ -461,7 +468,7 @@ def getESR(current=900, depth=10):
 
         progress = 0
         progress_var = IntVar()
-        progress_bar = Progressbar(popup, variable=progress_var, maximum=depth * 2)
+        progress_bar = Progressbar(popup, variable=progress_var, maximum=depth * 2 + 25)
         progress_bar.pack(fill=X, expand=1, side=BOTTOM, padx=10, pady=10)
         popup.pack_slaves()
 
@@ -481,6 +488,9 @@ def getESR(current=900, depth=10):
                 messagebox.showerror("Error", "Device is not functioning properly.")
                 ser.battCurrent = 0
                 return
+
+            progress += 1
+            progress_var.set(progress)
 
             i += 1
         for _ in range(depth):
@@ -518,6 +528,7 @@ def startTest(mode: str) -> None:
     connectButton["state"] = "disabled"
     battChemLabel["state"] = "disabled"
     battChemDrop["state"] = "disabled"
+    getESRButton["state"] = "disabled"
     resetButton["state"] = "disabled"
 
     for ax in axs.flat:
@@ -565,15 +576,19 @@ def startConstCurntDraw():
     timeLabel["state"] = "normal"
     timeValue["state"] = "normal"
 
-    startTest("Current")
+    if ESRString.get() != "Fault":
+        startTest("Current")
 
-    startTime = time()
+        startTime = time()
 
-    ser.battCurrent = int(constCurntString.get())
-    constCurntStartButton["state"] = "nornmal"
-    constCurntStartButton["text"] = "Stop"
-    stopTest = stopConstCurntDraw
-    constCurntStartButton["command"] = stopTest
+        ser.battCurrent = int(constCurntString.get())
+        constCurntStartButton["state"] = "nornmal"
+        constCurntStartButton["text"] = "Stop"
+        stopTest = stopConstCurntDraw
+        constCurntStartButton["command"] = stopTest
+    else:
+        constCurntStartButton["state"] = "nornmal"
+        constCurntStartButton["text"] = "Start"
 
 
 def stopConstCurntDraw():
@@ -586,6 +601,7 @@ def stopConstCurntDraw():
     comDropLabel["state"] = "normal"
     comDrop["state"] = "normal"
     connectButton["state"] = "normal"
+    getESRButton["state"] = "normal"
     constCurntValue["state"] = "normal"
     constPwrStartButton["state"] = "normal"
     constPwrValue["state"] = "normal"
@@ -605,19 +621,24 @@ def startConstPwrDraw():
     ESRValue["state"] = "disabled"
     if ESRString.get() == "":
         getESR()
-    ESRValue["state"] = "normal"
-    timeLabel["state"] = "normal"
-    timeValue["state"] = "normal"
 
-    startTest("Power")
+    if ESRString.get() != "Fault":
+        ESRValue["state"] = "normal"
+        timeLabel["state"] = "normal"
+        timeValue["state"] = "normal"
 
-    startTime = time()
+        startTest("Power")
 
-    ser.battPower = int(constPwrString.get())
-    constPwrStartButton["state"] = "nornmal"
-    constPwrStartButton["text"] = "Stop"
-    stopTest = stopConstPwrDraw
-    constPwrStartButton["command"] = stopTest
+        startTime = time()
+
+        ser.battPower = int(constPwrString.get())
+        constPwrStartButton["state"] = "nornmal"
+        constPwrStartButton["text"] = "Stop"
+        stopTest = stopConstPwrDraw
+        constPwrStartButton["command"] = stopTest
+    else:
+        constPwrStartButton["state"] = "nornmal"
+        constPwrStartButton["text"] = "Start"
 
 
 def stopConstPwrDraw():
@@ -630,6 +651,7 @@ def stopConstPwrDraw():
     comDropLabel["state"] = "normal"
     comDrop["state"] = "normal"
     connectButton["state"] = "normal"
+    getESRButton["state"] = "normal"
     constPwrValue["state"] = "normal"
     constCurntStartButton["state"] = "normal"
     constCurntValue["state"] = "normal"
@@ -870,5 +892,10 @@ canvas._tkcanvas.pack()
 
 updateAxisLabel()
 updatePlot()
+
+for d in ser.ports.values():
+    if d.description == "Battery Evaluator" and d.manufacturer == "Adin Ackerman":
+        comportString.set(str(d.description))
+        connect()
 
 mainloop()
